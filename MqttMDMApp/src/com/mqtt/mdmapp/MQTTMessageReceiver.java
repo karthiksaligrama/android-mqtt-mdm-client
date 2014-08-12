@@ -140,8 +140,8 @@ public class MQTTMessageReceiver extends BroadcastReceiver {
 		public void onEnabled(Context context, Intent intent) {
 			showToast(context,
 					context.getString(R.string.admin_receiver_status_enabled));
-			Intent mqttservice = new Intent(context, MQTTService.class);
-			context.startService(mqttservice);
+//			Intent mqttservice = new Intent(context, MQTTService.class);
+//			context.startService(mqttservice);
 
 		}
 

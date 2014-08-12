@@ -54,15 +54,15 @@ public class SplashActivity extends Activity {
 					REQUEST_CODE_ENABLE_ADMIN);
 		}
 
-		messageIntentReceiver = new MQTTMessageReceiver();
-		IntentFilter intentCFilter = new IntentFilter(
-				MQTTService.MQTT_MSG_RECEIVED_INTENT);
-		registerReceiver(messageIntentReceiver, intentCFilter);
+		
 	}
 
 	@Override
 	protected void onResume() {
 		super.onResume();
+		
+		Intent mqttservice = new Intent(this, MQTTService.class);
+		startService(mqttservice);
 	}
 
 	@Override
@@ -103,7 +103,6 @@ public class SplashActivity extends Activity {
 		super.onDestroy();
 	}
 
-	private MQTTMessageReceiver messageIntentReceiver;
 
 	
 

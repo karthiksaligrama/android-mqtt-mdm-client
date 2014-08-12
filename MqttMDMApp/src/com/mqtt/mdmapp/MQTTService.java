@@ -37,6 +37,8 @@ import com.mqtt.utils.Utils;
 
 public class MQTTService extends Service implements MqttSimpleCallback {
 
+	private static final String TAG = "MQTTService";
+
 	public static final String APP_ID = "org.mosquitto.android.mqtt";
 
 	public static final String MQTT_MSG_RECEIVED_INTENT = "org.mosquitto.android.mqtt.MSGRECVD";
@@ -80,6 +82,8 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 
 	private PingSender pingSender;
 
+	private MQTTMessageReceiver messageIntentReceiver;
+
 	@Override
 	public void onCreate() {
 		super.onCreate();
@@ -98,6 +102,11 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 				ConnectivityManager.ACTION_BACKGROUND_DATA_SETTING_CHANGED));
 
 		defineConnectionToBroker(brokerHostName);
+
+		messageIntentReceiver = new MQTTMessageReceiver();
+		IntentFilter intentCFilter = new IntentFilter(
+				MQTTService.MQTT_MSG_RECEIVED_INTENT);
+		registerReceiver(messageIntentReceiver, intentCFilter);
 	}
 
 	@Override
@@ -111,6 +120,10 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 		}, "MQTTservice").start();
 	}
 
+	/**
+	 * @author Karthik Start the application in a seperate thread with sticky
+	 *         flag
+	 */
 	@Override
 	public int onStartCommand(final Intent intent, int flags, final int startId) {
 		new Thread(new Runnable() {
@@ -123,6 +136,11 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 		return START_STICKY;
 	}
 
+	/**
+	 * @author karthik
+	 * @param intent
+	 * @param startId
+	 */
 	synchronized void handleStart(Intent intent, int startId) {
 		if (mqttClient == null) {
 			stopSelf();
@@ -164,19 +182,24 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 	@Override
 	public void onDestroy() {
 		super.onDestroy();
-		disconnectFromBroker();
-		broadcastServiceStatus("Disconnected");
-		if (dataEnabledReceiver != null) {
-			unregisterReceiver(dataEnabledReceiver);
-			dataEnabledReceiver = null;
-		}
-
-		if (mBinder != null) {
-			mBinder.close();
-			mBinder = null;
-		}
+		// disconnectFromBroker();
+		// broadcastServiceStatus("Disconnected");
+		// if (dataEnabledReceiver != null) {
+		// unregisterReceiver(dataEnabledReceiver);
+		// dataEnabledReceiver = null;
+		// }
+		//
+		// if (mBinder != null) {
+		// mBinder.close();
+		// mBinder = null;
+		// }
 	}
 
+	/**
+	 * @author karthik
+	 * @param statusDescription
+	 * @description broadcast the latest status of network/service
+	 */
 	private void broadcastServiceStatus(String statusDescription) {
 		Intent broadcastIntent = new Intent();
 		broadcastIntent.setAction(MQTT_STATUS_INTENT);
@@ -184,6 +207,12 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 		sendBroadcast(broadcastIntent);
 	}
 
+	/**
+	 * @author karthik
+	 * @param topic
+	 * @param message
+	 * @description Receive the MQTT message Broadcast
+	 */
 	private void broadcastReceivedMessage(String topic, String message) {
 		Intent broadcastIntent = new Intent();
 		broadcastIntent.setAction(MQTT_MSG_RECEIVED_INTENT);
@@ -280,13 +309,15 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 	@Override
 	public void publishArrived(String topic, byte[] payloadbytes, int qos,
 			boolean retained) {
+		Log.d(TAG, "publish Arrived , topic = " + topic + " Payload = "
+				+ new String(payloadbytes));
 		PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
 		WakeLock wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MQTT");
 		wl.acquire();
 		String messageBody = new String(payloadbytes);
-		if (addReceivedMessageToStore(topic, messageBody)) {
-			broadcastReceivedMessage(topic, messageBody);
-		}
+		// if (addReceivedMessageToStore(topic, messageBody)) {
+		broadcastReceivedMessage(topic, messageBody);
+		// }
 		scheduleNextPing();
 		while (wl.isHeld()) {
 			wl.release();
@@ -307,6 +338,11 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 		}
 	}
 
+	/**
+	 * 
+	 * @return true or false if the connection to the broker was successful or
+	 *         not
+	 */
 	private boolean connectToBroker() {
 		try {
 			mqttClient
@@ -434,6 +470,10 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 		}
 	}
 
+	/**
+	 * @description Schedule the ping to the server so that the TCP connection
+	 *              doesn't block
+	 */
 	private void scheduleNextPing() {
 		PendingIntent pendingIntent = PendingIntent
 				.getBroadcast(this, 0, new Intent(MQTT_PING_ACTION),
@@ -446,6 +486,12 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 				pendingIntent);
 	}
 
+	/**
+	 * 
+	 * @author karthik Handle the ping broadcast, if the ping fails then connect
+	 *         to broker and schedule another ping.
+	 * 
+	 */
 	public class PingSender extends BroadcastReceiver {
 		@Override
 		public void onReceive(final Context context, final Intent intent) {
