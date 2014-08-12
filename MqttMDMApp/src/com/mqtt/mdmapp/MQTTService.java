@@ -315,9 +315,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 		WakeLock wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MQTT");
 		wl.acquire();
 		String messageBody = new String(payloadbytes);
-		// if (addReceivedMessageToStore(topic, messageBody)) {
 		broadcastReceivedMessage(topic, messageBody);
-		// }
 		scheduleNextPing();
 		while (wl.isHeld()) {
 			wl.release();
@@ -526,6 +524,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 		if (value.length() == 0) {
 			previousValue = dataCache.remove(key);
 		} else {
+
 			previousValue = dataCache.put(key, value);
 		}
 		return ((previousValue == null) || (previousValue.equals(value) == false));
