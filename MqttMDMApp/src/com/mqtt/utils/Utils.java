@@ -4,13 +4,16 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 import org.apache.http.conn.util.InetAddressUtils;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.net.ConnectivityManager;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Environment;
@@ -120,7 +123,8 @@ public class Utils {
 						.getInetAddresses());
 				for (InetAddress addr : addrs) {
 					if (!addr.isLoopbackAddress()) {
-						String sAddr = addr.getHostAddress().toUpperCase();
+						String sAddr = addr.getHostAddress().toUpperCase(
+								Locale.ENGLISH);
 						boolean isIPv4 = InetAddressUtils.isIPv4Address(sAddr);
 						if (useIPv4) {
 							if (isIPv4)
@@ -137,8 +141,7 @@ public class Utils {
 				}
 			}
 		} catch (Exception ex) {
-			Log.e("Utils",
-					"Exception while getting the ip address");
+			Log.e("Utils", "Exception while getting the ip address");
 		} // for now eat exceptions
 		return "";
 	}
@@ -161,17 +164,35 @@ public class Utils {
 		return android.os.Build.MODEL;
 	}
 
+	@SuppressWarnings("deprecation")
+	@SuppressLint("NewApi")
 	public static String getFreeSpaceInBytes(Context context) {
 		long availableSpace = -1L;
 		try {
 			StatFs stat = new StatFs(Environment.getExternalStorageDirectory()
 					.getPath());
-			availableSpace = (long) stat.getAvailableBlocks()
-					* (long) stat.getBlockSize();
+			if (android.os.Build.VERSION.SDK_INT >= 18) {
+				availableSpace = stat.getAvailableBlocksLong()
+						* stat.getBlockSizeLong();
+			} else {
+				availableSpace = (long) stat.getAvailableBlocks()
+						* (long) stat.getBlockSize();
+			}
 		} catch (Exception e) {
 			// suppressed exception
 		}
 		return String.valueOf(availableSpace);
+	}
+
+	public static boolean isOnline(Context context) {
+		ConnectivityManager cm = (ConnectivityManager) context
+				.getSystemService(Context.CONNECTIVITY_SERVICE);
+		if (cm.getActiveNetworkInfo() != null
+				&& cm.getActiveNetworkInfo().isAvailable()
+				&& cm.getActiveNetworkInfo().isConnected()) {
+			return true;
+		}
+		return false;
 	}
 
 }

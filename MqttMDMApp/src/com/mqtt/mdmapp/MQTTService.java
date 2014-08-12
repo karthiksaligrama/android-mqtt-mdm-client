@@ -6,6 +6,7 @@ import java.util.Date;
 import java.util.Enumeration;
 import java.util.Hashtable;
 
+import android.annotation.SuppressLint;
 import android.app.AlarmManager;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -16,6 +17,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Binder;
 import android.os.IBinder;
 import android.os.PowerManager;
@@ -31,6 +33,7 @@ import com.ibm.mqtt.MqttNotConnectedException;
 import com.ibm.mqtt.MqttPersistence;
 import com.ibm.mqtt.MqttPersistenceException;
 import com.ibm.mqtt.MqttSimpleCallback;
+import com.mqtt.utils.Utils;
 
 public class MQTTService extends Service implements MqttSimpleCallback {
 
@@ -127,7 +130,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 		}
 
 		ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
-		if (cm.getBackgroundDataSetting() == false) {
+		if (cm.getActiveNetworkInfo().getState() == NetworkInfo.State.DISCONNECTED) {
 			connectionStatus = MQTTConnectionStatus.NOTCONNECTED_DATADISABLED;
 			broadcastServiceStatus("Not connected - background data disabled");
 			return;
@@ -137,7 +140,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 
 		if (isAlreadyConnected() == false) {
 			connectionStatus = MQTTConnectionStatus.CONNECTING;
-			if (isOnline()) {
+			if (Utils.isOnline(this)) {
 				if (connectToBroker()) {
 					subscribeToTopic(topicName);
 				}
@@ -252,12 +255,13 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 		broadcastServiceStatus("Disconnected");
 	}
 
+	@SuppressLint("Wakelock")
 	public void connectionLost() throws Exception {
 		PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
 		WakeLock wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MQTT");
 		wl.acquire();
 
-		if (isOnline() == false) {
+		if (Utils.isOnline(this)) {
 			connectionStatus = MQTTConnectionStatus.NOTCONNECTED_WAITINGFORINTERNET;
 			broadcastServiceStatus("Connection lost - no network connection");
 		} else {
@@ -267,9 +271,12 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 				subscribeToTopic(topicName);
 			}
 		}
-		wl.release();
+		while (wl.isHeld()) {
+			wl.release();
+		}
 	}
 
+	@SuppressLint("Wakelock")
 	@Override
 	public void publishArrived(String topic, byte[] payloadbytes, int qos,
 			boolean retained) {
@@ -281,7 +288,9 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 			broadcastReceivedMessage(topic, messageBody);
 		}
 		scheduleNextPing();
-		wl.release();
+		while (wl.isHeld()) {
+			wl.release();
+		}
 	}
 
 	private void defineConnectionToBroker(String brokerHostName) {
@@ -375,6 +384,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 		@Override
 		public void onReceive(final Context ctx, final Intent intent) {
 			new Thread(new Runnable() {
+				@SuppressLint("Wakelock")
 				@Override
 				public void run() {
 					PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
@@ -382,7 +392,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 							PowerManager.PARTIAL_WAKE_LOCK, "MQTT");
 					wl.acquire();
 					ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
-					if (cm.getBackgroundDataSetting()) {
+					if (cm.getActiveNetworkInfo().getState() == NetworkInfo.State.DISCONNECTED) {
 						defineConnectionToBroker(brokerHostName);
 						handleStart(intent, 0);
 					} else {
@@ -390,30 +400,35 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 						broadcastServiceStatus("Not connected - background data disabled");
 						disconnectFromBroker();
 					}
-					wl.release();
+					while (wl.isHeld()) {
+						wl.release();
+					}
 				}
 			}, "MQTTservice").start();
 		}
 	}
 
 	private class NetworkConnectionIntentReceiver extends BroadcastReceiver {
-		@Override
-		public void onReceive(Context ctx, Intent intent) {
 
+		@Override
+		public void onReceive(final Context ctx, Intent intent) {
 			new Thread(new Runnable() {
 
+				@SuppressLint("Wakelock")
 				@Override
 				public void run() {
 					PowerManager pm = (PowerManager) getSystemService(POWER_SERVICE);
 					WakeLock wl = pm.newWakeLock(
 							PowerManager.PARTIAL_WAKE_LOCK, "MQTT");
 					wl.acquire();
-					if (isOnline()) {
+					if (Utils.isOnline(ctx)) {
 						if (connectToBroker()) {
 							subscribeToTopic(topicName);
 						}
 					}
-					wl.release();
+					while (wl.isHeld()) {
+						wl.release();
+					}
 				}
 			}, "MQTTService").start();
 		}
@@ -493,13 +508,4 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 		return mqttClientId;
 	}
 
-	private boolean isOnline() {
-		ConnectivityManager cm = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
-		if (cm.getActiveNetworkInfo() != null
-				&& cm.getActiveNetworkInfo().isAvailable()
-				&& cm.getActiveNetworkInfo().isConnected()) {
-			return true;
-		}
-		return false;
-	}
 }
