@@ -17,14 +17,15 @@ In splash activity update the "QUEUE_END_POINT" variable to point to your hostna
 
 The following commands are supported as of this moment
 ```
-ADMIN_COMMAND_LOCK_DEVICE = "lock";
-ADMIN_COMMAND_REMOTE_WIPE = "remote_wipe";
-ADMIN_RESET_PASSWORD = "reset_password";
-ADMIN_DISABLE_CAMERA = "disable_camera";
-ADMIN_ENABLE_CAMERA = "enable_camera";
-ADMIN_ENABLE_ENCRYPTION = "enable_encryption";
-ADMIN_DISABLE_ENCRYTION = "disable_encrytion";
-ADMIN_ENABLE_PASSWORD_POLICY = "password_policy";
+ADMIN_COMMAND_LOCK_DEVICE = "lock"
+ADMIN_COMMAND_REMOTE_WIPE = "remote_wipe"
+ADMIN_RESET_PASSWORD = "reset_password"
+ADMIN_DISABLE_CAMERA = "disable_camera"
+ADMIN_ENABLE_CAMERA = "enable_camera"
+ADMIN_ENABLE_ENCRYPTION = "enable_encryption"
+ADMIN_DISABLE_ENCRYTION = "disable_encrytion"
+ADMIN_ENABLE_PASSWORD_POLICY = "password_policy"
+PUSH_NOTIFICATION_MESSAGE = "push_notification"
 ```
 
 send the data in the format from the server
