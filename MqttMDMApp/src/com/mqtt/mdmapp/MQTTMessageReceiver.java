@@ -1,5 +1,6 @@
 package com.mqtt.mdmapp;
 
+import android.app.NotificationManager;
 import android.app.admin.DeviceAdminReceiver;
 import android.app.admin.DevicePolicyManager;
 import android.content.BroadcastReceiver;
@@ -7,6 +8,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.support.v4.app.NotificationCompat;
 import android.text.TextUtils;
 import android.util.Log;
 import android.widget.Toast;
@@ -27,6 +29,7 @@ public class MQTTMessageReceiver extends BroadcastReceiver {
 	private static final String ADMIN_ENABLE_ENCRYPTION = "enable_encryption";
 	private static final String ADMIN_DISABLE_ENCRYTION = "disable_encrytion";
 	private static final String ADMIN_ENABLE_PASSWORD_POLICY = "password_policy";
+	private static final String PUSH_NOTIFICATION_MESSAGE = "push_notification";
 
 	DevicePolicyManager mDPM;
 
@@ -70,8 +73,11 @@ public class MQTTMessageReceiver extends BroadcastReceiver {
 
 		if (command == null || command.isEmpty() || TextUtils.isEmpty(command))
 			return;
-
-		if (command.equalsIgnoreCase(ADMIN_COMMAND_LOCK_DEVICE)) {
+		if (command.equalsIgnoreCase(PUSH_NOTIFICATION_MESSAGE)) {
+			String message = ((JsonElement) object.get("message"))
+					.getAsString();
+			displayNotification(message);
+		} else if (command.equalsIgnoreCase(ADMIN_COMMAND_LOCK_DEVICE)) {
 			mDPM.lockNow();
 		} else if (command.equalsIgnoreCase(ADMIN_COMMAND_REMOTE_WIPE)) {
 			mDPM.wipeData(0);
@@ -128,6 +134,20 @@ public class MQTTMessageReceiver extends BroadcastReceiver {
 		}
 	}
 
+	private static final int notificationId = 23123;
+
+	private void displayNotification(String message) {
+		NotificationCompat.Builder mNotifyBuilder = new NotificationCompat.Builder(
+				context).setContentTitle("MQTT Message")
+				.setContentText(message).setSmallIcon(R.drawable.ic_launcher);
+
+		NotificationManager mNotificationManager = (NotificationManager) context
+				.getSystemService(Context.NOTIFICATION_SERVICE);
+
+		mNotificationManager.notify(notificationId, mNotifyBuilder.build());
+
+	}
+
 	public static class MDMReciever extends DeviceAdminReceiver {
 
 		void showToast(Context context, String msg) {
@@ -140,9 +160,6 @@ public class MQTTMessageReceiver extends BroadcastReceiver {
 		public void onEnabled(Context context, Intent intent) {
 			showToast(context,
 					context.getString(R.string.admin_receiver_status_enabled));
-//			Intent mqttservice = new Intent(context, MQTTService.class);
-//			context.startService(mqttservice);
-
 		}
 
 		@Override

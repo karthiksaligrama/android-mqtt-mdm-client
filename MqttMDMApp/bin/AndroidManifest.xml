@@ -41,12 +41,6 @@
                 <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
             </intent-filter>
         </receiver>
-<!--         <receiver android:name="com.mqtt.mdmapp.MQTTService$BackgroundDataChangeIntentReceiver" > -->
-<!--             <intent-filter> -->
-<!--                 <action android:name="android.net.conn.CONNECTIVITY_CHANGE" /> -->
-<!--                 <action android:name="android.net.wifi.WIFI_STATE_CHANGED" /> -->
-<!--             </intent-filter> -->
-<!--         </receiver> -->
         <receiver android:name="com.mqtt.mdmapp.MQTTMessageReceiver" >
         </receiver>
 

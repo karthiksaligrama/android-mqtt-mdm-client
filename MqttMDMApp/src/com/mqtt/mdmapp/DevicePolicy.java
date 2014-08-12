@@ -6,6 +6,11 @@ import com.google.gson.annotations.SerializedName;
 
 public class DevicePolicy implements Serializable {
 
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 4207377300245386627L;
+
 	@SerializedName(value = "enable_camera")
 	private boolean enable_camera;
 

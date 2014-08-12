@@ -72,7 +72,7 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 
 	private short keepAliveSeconds = 20 * 60;
 
-	private String mqttClientId = null;
+	private static String mqttClientId = null;
 
 	private IMqttClient mqttClient = null;
 
@@ -154,7 +154,8 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 			return;
 		}
 		rebroadcastStatus();
-		rebroadcastReceivedMessages();
+		//TODO: commented till the cache issue is fixed
+		// rebroadcastReceivedMessages();
 
 		if (isAlreadyConnected() == false) {
 			connectionStatus = MQTTConnectionStatus.CONNECTING;
@@ -182,17 +183,6 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 	@Override
 	public void onDestroy() {
 		super.onDestroy();
-		// disconnectFromBroker();
-		// broadcastServiceStatus("Disconnected");
-		// if (dataEnabledReceiver != null) {
-		// unregisterReceiver(dataEnabledReceiver);
-		// dataEnabledReceiver = null;
-		// }
-		//
-		// if (mBinder != null) {
-		// mBinder.close();
-		// mBinder = null;
-		// }
 	}
 
 	/**
@@ -486,7 +476,9 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 
 	/**
 	 * 
-	 * @author karthik Handle the ping broadcast, if the ping fails then connect
+	 * @author karthik 
+	 * @description
+	 * Handle the ping broadcast, if the ping fails then connect
 	 *         to broker and schedule another ping.
 	 * 
 	 */
@@ -519,6 +511,10 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 
 	private Hashtable<String, String> dataCache = new Hashtable<String, String>();
 
+	// TODO: This logic is flawed. Multiple messages from the same clients will
+	// get rejected, we need to remove this logic and move to a list based
+	// system if we want to store the previous values of the system.
+	@SuppressWarnings("unused")
 	private boolean addReceivedMessageToStore(String key, String value) {
 		String previousValue = null;
 		if (value.length() == 0) {
@@ -530,7 +526,8 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 		return ((previousValue == null) || (previousValue.equals(value) == false));
 	}
 
-	public void rebroadcastReceivedMessages() {
+	//TODO: need to relook into this logic as well based on the method above
+	private void rebroadcastReceivedMessages() {
 		Enumeration<String> e = dataCache.keys();
 		while (e.hasMoreElements()) {
 			String nextKey = e.nextElement();
