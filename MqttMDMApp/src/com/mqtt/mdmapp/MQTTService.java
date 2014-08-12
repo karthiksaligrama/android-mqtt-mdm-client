@@ -81,8 +81,6 @@ public class MQTTService extends Service implements MqttSimpleCallback {
 	public void onCreate() {
 		super.onCreate();
 
-		android.os.Debug.waitForDebugger();
-
 		connectionStatus = MQTTConnectionStatus.INITIAL;
 		mBinder = new LocalBinder<MQTTService>(this);
 
